@@ -1,0 +1,99 @@
+
+from snakemake.utils import min_version
+
+##### set minimum snakemake version #####
+min_version("8.4.1")
+
+
+configfile: "config/config.yaml"
+
+
+include: "inputs.smk"
+
+
+rule all:
+    input:
+        expand(ws_path("ld/{hotspot}.ld"), hotspot = data.hotspot2)
+
+
+
+rule split_variants:
+    input:
+        config["path_network_summary"]
+    output:
+        ws_path("snps/{hotspot}.list")
+    run:
+        import pandas as pd
+        df = pd.read_csv(input[0])
+        # Filter for the specific hotspot
+        subset = df[df["hotspot2"] == wildcards.hotspot]["most_frequent_cond_SNP"]
+        # Write variants to file, one per line
+        subset.to_csv(output[0], index=False, header=False)
+
+
+
+rule split_genotype:
+    input:
+        rules.split_variants.output
+    output:
+        ws_path("bed/{hotspot}.bed")
+    params:
+#        ofile=lambda wildcards, output: output[0].replace(".bed", ""),
+        genotype=config["path_genotype"],
+        region="{hotspot}",
+    resources:
+        runtime=lambda wc, attempt: 120 + attempt * 60,
+    shell:
+        """
+        echo "Hotspot: {params.region}"
+        
+        # load plink
+        source /exchange/healthds/singularity_functions
+        
+        # extract chromosome
+        chrom=$(echo {params.region} | cut -d'_' -f1 | sed 's/chr//')
+        
+        # remove suffix
+        prefix=$(echo {output[0]} | sed 's/.bed$//')
+        
+        # subset the genotype
+        plink --bfile {params.genotype}$chrom \
+              --extract {input[0]} \
+              --make-bed \
+              --out $prefix \
+              --threads 8 \
+              --memory 7500
+        """
+
+
+rule compute_ld:
+    input:
+        rules.split_genotype.output
+    output:
+        ws_path("ld/{hotspot}.ld")
+    params:
+        #ifile=lambda wildcards, output: input[0].replace(".bed", ""),
+        region="{hotspot}",
+    resources:
+        runtime=lambda wc, attempt: 120 + attempt * 60,
+    shell:
+        """
+        echo "Hotspot: {params.region}"
+        
+        # load plink
+        source /exchange/healthds/singularity_functions
+        
+        # remove suffix
+        prefix=$(echo {output[0]} | sed 's/.ld$//')
+        suffix=$(echo {input[0]}  | sed 's/.bed$//')
+
+        # subset the genotype
+        plink --bfile $suffix \
+              --r2 \
+              --ld-window 999999 \
+              --ld-window-kb 999999 \
+              --ld-window-r2 0 \
+              --out $prefix \
+              --threads 8 \
+              --memory 7500
+        """
