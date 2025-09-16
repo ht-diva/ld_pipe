@@ -1,0 +1,6 @@
+# configuration file
+path_network_summary: 'config/Hotspot_Community_Summary_Final_1.csv'
+workspace_path: "results/hotspots"
+
+# imputed genotype of INTERVAL in bed/bim/fam
+path_genotype: "/exchange/healthds/pQTL/INTERVAL/Genetic_QC_files/bed/qc_recoded_harmonised/impute_recoded_selected_sample_filter_hq_var_new_id_alleles_"
