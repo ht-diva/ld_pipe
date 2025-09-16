@@ -1,0 +1,34 @@
+executor: slurm
+jobs: 250
+software-deployment-method:
+   - conda
+   - apptainer
+retries: 0
+max-jobs-per-second: 10
+max-status-checks-per-second: 1
+local-cores: 1
+cores: &cores 4
+latency-wait: 60
+keep-going: True
+rerun-incomplete: False
+printshellcmds: True
+scheduler: ilp
+
+default-resources:
+    slurm_partition: cpuq
+    # slurm_account: ${USER}
+    mem_mb: attempt * 512
+    threads: 1
+    runtime: attempt * 5
+set-threads:
+    harmonize_sumstats: *cores
+    bgzip_tabix: *cores
+set-resources:
+    split_genotype:
+        mem_mb: 8000 + attempt * 2048
+        threads: *cores
+    compute_ld:
+        mem_mb: 8000 + attempt * 2048
+        threads: *cores
+    xxx:
+        mem_mb: 4000 + attempt * 2048
