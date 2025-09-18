@@ -26,9 +26,19 @@ rule split_variants:
         import pandas as pd
         df = pd.read_csv(input[0])
         # Filter for the specific hotspot
-        subset = df[df["hotspot2"] == wildcards.hotspot]["most_frequent_cond_SNP"]
+        subset = df[df["hotspot2"] == wildcards.hotspot]["all_cond_SNP"]
+        
+        # Split, explode, strip whitespace, drop duplicates
+        variants = (
+            subset.str.split(",|;")       # split on commas → lists
+                  .explode()            # flatten into rows
+                  .str.strip()          # remove whitespace
+                  .dropna()             # drop NaNs
+                  .drop_duplicates()    # remove duplicates
+        )
+
         # Write variants to file, one per line
-        subset.to_csv(output[0], index=False, header=False)
+        variants.to_csv(output[0], index=False, header=False)
 
 
 
